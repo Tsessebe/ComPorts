@@ -5,8 +5,12 @@ The application monitors for changes in plugged in devices and reports which COM
 
 ## Interface
 
-### No devices connected
+### Window
+No devices connected             | Connected Devices
+:-------------------------:|:-------------------------:
+![No Devices connected](./Resources/NothingConnected.png) | ![Connected Devices](./Resources/LongNames.png)
 
-![No Devices connected](./Resources/NothingConnected.png)
+### Notifications
 
+![Notifications](./Resources/Notifications.png)
 
