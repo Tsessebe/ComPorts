@@ -1,4 +1,4 @@
-# COM Ports
+# COM Ports Monitor
 
 A handy windows tray application for monitoring COM ports on Windows.
 The application monitors for changes in plugged in devices and reports which COM port was just attached.
@@ -29,7 +29,9 @@ The application monitors for changes in plugged in devices and reports which COM
 
 ## Installation
 
-Download the zip-file from releases, unzip to a location on your pc/ laptop hard drive and run the exe.
+1. Download the zip-file from [releases](https://github.com/Tsessebe/ComPorts/releases).
+2. Unzip to a location on your pc/ laptop hard drive.
+3. Run the exe.
 
 The app will also start up when windows starts. 
 This can be disabled by right-click on the tray icon and deselect "Run on Windows Start" menu.
