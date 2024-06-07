@@ -4,7 +4,7 @@ A handy windows tray application for monitoring COM ports on Windows.
 The application monitors for changes in plugged in devices and reports which COM port was just attached.
 
 
-[!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/Tsessebe)
+[!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/Tsessebe){:target="_blank"}
 
 ## Interface
 
