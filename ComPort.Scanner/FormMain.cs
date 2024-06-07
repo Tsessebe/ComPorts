@@ -11,7 +11,7 @@ namespace ComPort.Scanner
     public partial class FormMain : Form
     {
         private const int GapSize = 2;
-        protected const int GapSize2 = GapSize * 2;
+        private const int GapSize2 = GapSize * 2;
         private const int MarginSize = 10;
         private const int MarginSize2 = MarginSize * 2;
 
@@ -40,24 +40,41 @@ namespace ComPort.Scanner
         public FormMain(ICollection<ComPortModel> ports)
         {
             Ports = ports.ToList();
-
             InitializeComponent();
 
             picDisplay.BorderStyle = BorderStyle.FixedSingle;
-
             picDisplay.Location = new Point(0, 0);
             picDisplay.Size = new Size(ClientSize.Width, ClientSize.Height);
         }
 
-        private List<ComPortModel> Ports { get; set; }
-
         private int HalfHeight { get; set; }
+
         private int HalfWidth { get; set; }
+
+        private List<ComPortModel> Ports { get; set; }
 
         public void OnComPortsChanged(object sender, ChangedEventArgs e)
         {
             Ports = e.Ports;
             Redraw();
+        }
+
+        protected override void OnResize(EventArgs e)
+        {
+            base.OnResize(e);
+
+            picDisplay.Location = new Point(0, 0);
+            picDisplay.Size = new Size(ClientSize.Width, ClientSize.Height);
+
+
+            if (WindowState == FormWindowState.Minimized)
+            {
+                Close();
+            }
+            else
+            {
+                Redraw();
+            }
         }
 
         private void DrawNoData()
@@ -77,10 +94,11 @@ namespace ComPort.Scanner
                 {
                     HalfHeight = current.Height / 2;
                     HalfWidth = current.Width / 2;
-
+                    
                     var background = backgroundBrush;
                     g.FillRectangle(background, 0, 0, current.Width, current.Height);
-
+                    DrawVersion(g, current.Height);
+                    
                     var textSize = g.MeasureString(NoDataText, Font, -1, StringFormat.GenericTypographic);
                     var textHalfHeight = textSize.Height / 2;
                     var textHalfWidth = textSize.Width / 2;
@@ -115,28 +133,61 @@ namespace ComPort.Scanner
             old?.Dispose();
         }
 
+        private int DrawVersion(Graphics g, int currentHeight)
+        {
+            var pen = headingLinePen;
+            var versionFont = GetFooterFont();
+            var versionText = $"Version: {Application.ProductVersion}";
+            var textSize = g.MeasureString(versionText, versionFont, -1, StringFormat.GenericTypographic);
+            var curY = currentHeight - (textSize.Height + GapSize2) - GapSize;
+            g.DrawString(versionText, Font, textBrush, MarginSize, curY, StringFormat.GenericTypographic);
+            curY -= (int)(GapSize + pen.Width);
+            
+            var p1 = new Point(MarginSize, (int)curY);
+            var p2 = new Point(current.Width - MarginSize2, (int)curY);
+            g.DrawLine(pen, p1, p2);
+
+            curY -= GapSize;
+            
+            return (int)curY;
+        }
+
+        private Font GetFooterFont()
+        {
+            return new Font(Font.Name, Font.Size - 2, FontStyle.Bold);
+        }
+
         private Font GetHeadingFont()
         {
             return new Font(Font.Name, Font.Size + 2, FontStyle.Bold);
         }
 
-        protected override void OnResize(EventArgs e)
+        private void OnFormClosing(object sender, FormClosingEventArgs e)
         {
-            base.OnResize(e);
+        }
 
-            picDisplay.Location = new Point(0, 0);
-            picDisplay.Size = new Size(ClientSize.Width, ClientSize.Height);
+        private void OnFormLoad(object sender, EventArgs e)
+        {
+            formTimer.Enabled = true;
 
+            var screen = Screen.PrimaryScreen;
 
-            if (WindowState == FormWindowState.Minimized)
-                Close();
-            else
-                Redraw();
+            var x = screen.WorkingArea.Width - Width;
+            var y = screen.WorkingArea.Height - Height;
+            Location = new Point(x, y);
+        }
+
+        private void OnFormTimerTick(object sender, EventArgs e)
+        {
+            formTimer.Enabled = false;
         }
 
         private void Redraw()
         {
-            if (picDisplay.Width < 10 || picDisplay.Height < 10) return;
+            if (picDisplay.Width < 10 || picDisplay.Height < 10)
+            {
+                return;
+            }
 
             if (Ports.Count == 0)
             {
@@ -159,9 +210,12 @@ namespace ComPort.Scanner
                 {
                     HalfHeight = current.Height / 2;
                     HalfWidth = current.Width / 2;
+                    
                     var background = backgroundBrush;
                     g.FillRectangle(background, 0, 0, current.Width, current.Height);
-
+                    
+                    var maxHeight = DrawVersion(g, current.Height);
+                    
                     var headingFont = GetHeadingFont();
                     var textSize = g.MeasureString("Com Ports", headingFont, -1, StringFormat.GenericTypographic);
                     // var textHalfHeight = textSize.Height / 2;
@@ -187,6 +241,11 @@ namespace ComPort.Scanner
                     var colWidth = p2.X - p1.X;
                     foreach (var item in Ports.OrderBy(p => p.No))
                     {
+                        if (curY > maxHeight)
+                        {
+                            continue;
+                        }
+                        
                         var text = item.DeviceName;
                         textSize = g.MeasureString(text, Font, -1, StringFormat.GenericTypographic);
                         if (textSize.Width > colWidth)
@@ -206,12 +265,12 @@ namespace ComPort.Scanner
                             textTmp = string.Join(" ", words.Take(takeCount));
                             textSize = g.MeasureString(textTmp, Font, -1, StringFormat.GenericTypographic);
                             g.DrawString(textTmp, Font, brush, curX, curY, StringFormat.GenericTypographic);
-                            
+
                             curY += textSize.Height + (int)(GapSize + pen.Width);
                             textTmp = string.Join(" ", words.Skip(takeCount));
                             textSize = g.MeasureString(textTmp, Font, -1, StringFormat.GenericTypographic);
                             g.DrawString(textTmp, Font, brush, curX, curY, StringFormat.GenericTypographic);
-                            
+
                             curY += textSize.Height + (int)(GapSize + pen.Width);
                         }
                         else
@@ -225,6 +284,8 @@ namespace ComPort.Scanner
                         g.DrawLine(pen, p1, p2);
                         curY += GapSize + pen.Width;
                     }
+
+                    DrawVersion(g, current.Height);
                 }
 
                 if (current == null)
@@ -238,26 +299,6 @@ namespace ComPort.Scanner
             IDisposable old = picDisplay.Image;
             picDisplay.Image = (Bitmap)localCopy.Clone();
             old?.Dispose();
-        }
-
-        private void OnFormClosing(object sender, FormClosingEventArgs e)
-        {
-        }
-
-        private void OnFormLoad(object sender, EventArgs e)
-        {
-            formTimer.Enabled = true;
-
-            var screen = Screen.PrimaryScreen;
-
-            var x = screen.WorkingArea.Width - Width;
-            var y = screen.WorkingArea.Height - Height;
-            Location = new Point(x, y);
-        }
-
-        private void OnFormTimerTick(object sender, EventArgs e)
-        {
-            formTimer.Enabled = false;
         }
     }
 }

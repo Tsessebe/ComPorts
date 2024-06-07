@@ -11,7 +11,7 @@
     <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
-    <Deterministic>true</Deterministic>
+    <Deterministic>false</Deterministic>
     <PublishUrl>publish\</PublishUrl>
     <Install>true</Install>
     <InstallFrom>Disk</InstallFrom>
@@ -65,6 +65,12 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="FormAbout.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="FormAbout.Designer.cs">
+      <DependentUpon>FormAbout.cs</DependentUpon>
+    </Compile>
     <Compile Include="FormMain.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -78,6 +84,9 @@
     <Compile Include="Watchers\EventArguments\ChangedEventArgs.cs" />
     <Compile Include="Watchers\Models\ComPortModel.cs" />
     <Compile Include="Watchers\SerialPortWatcher.cs" />
+    <EmbeddedResource Include="FormAbout.resx">
+      <DependentUpon>FormAbout.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="FormMain.resx">
       <DependentUpon>FormMain.cs</DependentUpon>
     </EmbeddedResource>

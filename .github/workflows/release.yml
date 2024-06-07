@@ -1,0 +1,58 @@
+name: Release Workflow
+
+on:
+  push:
+    tags:
+      - 'v*'  # Trigger only on tags that start with 'v'
+
+jobs:
+  build:
+    runs-on: windows-2019
+
+    env:
+      app_name: 'ComPortMonitor'
+      app_version: ${{ github.ref }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '6.0.x'
+
+      - name: Restore Dependencies
+        run: dotnet restore
+
+      - name: Build Application
+        run: dotnet build --configuration Release
+
+      - name: Package Application
+        run: dotnet publish -c Release -o ./publish
+
+      - name: Zip Application
+        run: |
+          cd publish
+          zip -r ${{ env.app_name }}_${{ env.app_version }}.zip YourApp.exe
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: ${{ github.ref }}
+          body: |
+            Release notes here...
+
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./publish/${{ env.app_name }}_${{ env.app_version }}.zip
+          asset_name: ${{ env.app_name }}_${{ env.app_version }}.zip
+          asset_content_type: application/zip

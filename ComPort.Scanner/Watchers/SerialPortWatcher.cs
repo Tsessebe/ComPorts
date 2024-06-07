@@ -15,36 +15,30 @@ namespace ComPort.Scanner.Watchers
     [ExcludeFromCodeCoverage]
     public sealed class SerialPortWatcher : IDisposable
     {
-        public event EventHandler<ChangedEventArgs> Changed = delegate { };
-        public event EventHandler<AddedEventArgs> Added = delegate { };
-
-        private void OnPortsChanged()
-        {
-            var handler = Changed;
-            handler?.Invoke(this, new ChangedEventArgs(ComPorts.Values.ToList()));
-        }
-
-        private void OnPortsAdded(List<ComPortModel> ports)
-        {
-            var handler = Added;
-            handler?.Invoke(this, new AddedEventArgs(ports));
-        }
+        private TaskScheduler taskScheduler;
 
         private ManagementEventWatcher watcher;
-        private TaskScheduler taskScheduler;
 
         public SerialPortWatcher()
         {
             ComPorts = new ConcurrentDictionary<string, ComPortModel>();
         }
 
-        public ConcurrentDictionary<string, ComPortModel> ComPorts { get; private set; }
+        public event EventHandler<AddedEventArgs> Added = delegate { };
+        public event EventHandler<ChangedEventArgs> Changed = delegate { };
+
+        public ConcurrentDictionary<string, ComPortModel> ComPorts { get; }
+
+        public void Dispose()
+        {
+            watcher.Stop();
+        }
 
         public void Start()
         {
             taskScheduler = TaskScheduler.FromCurrentSynchronizationContext();
 
-            WqlEventQuery query = new WqlEventQuery("SELECT * FROM Win32_DeviceChangeEvent");
+            var query = new WqlEventQuery(@"SELECT * FROM Win32_DeviceChangeEvent");
             watcher = new ManagementEventWatcher(query);
             watcher.EventArrived += (sender, eventArgs) => CheckForNewPorts(eventArgs);
 
@@ -58,50 +52,56 @@ namespace ComPort.Scanner.Watchers
             watcher?.Stop();
         }
 
+        // ReSharper disable once UnusedParameter.Local
         private void CheckForNewPorts(EventArrivedEventArgs args)
         {
-            // do it async so it is performed in the UI thread if this class has been created in the UI thread
-            Task.Factory.StartNew(CheckForNewPortsAsync, CancellationToken.None, TaskCreationOptions.None, taskScheduler);
+            // do it async, so it is performed in the UI thread if this class has been created in the UI thread
+            Task.Factory.StartNew(CheckForNewPortsAsync, CancellationToken.None, TaskCreationOptions.None,
+                taskScheduler);
         }
 
         private void CheckForNewPortsAsync()
         {
-            bool newPorts = false;
-            bool removedPorts = false;
+            var newPorts = false;
+            var removedPorts = false;
             var addedPorts = new List<ComPortModel>();
 
-            using (var searcher = new ManagementObjectSearcher("SELECT * FROM Win32_PnPEntity WHERE Caption like '%(COM%'"))
+            using (var searcher =
+                   new ManagementObjectSearcher(@"SELECT * FROM Win32_PnPEntity WHERE Caption like '%(COM%'"))
             {
-                var portnames = SerialPort.GetPortNames().OrderBy(_ => _).ToList();
+                var portNames = SerialPort.GetPortNames().OrderBy(p => p).ToList();
                 var ports = searcher.Get().Cast<ManagementBaseObject>().ToList().Select(p => p["Caption"].ToString());
 
-                var portList = portnames
+                var portList = portNames
                     .Select(n => new ComPortModel(n, ports.FirstOrDefault(s => s.Contains(n))))
-                    .Where(_ => !_.DeviceName.StartsWith("Standard Serial"))
-                    .OrderBy(_ => _.Name).ToList();
-
+                    .Where(p => !p.DeviceName.StartsWith("Standard Serial"))
+                    .OrderBy(p => p.Name).ToList();
 
                 foreach (var port in portList)
                 {
-                    if (ComPorts.TryAdd(port.Name, port))
+                    if (!ComPorts.TryAdd(port.Name, port))
                     {
-                        addedPorts.Add(port);
-                        newPorts = true;
+                        continue;
                     }
 
+                    addedPorts.Add(port);
+                    newPorts = true;
                 }
 
                 foreach (var comPort in ComPorts.Values)
                 {
-                    if (!portnames.Contains(comPort.Name))
+                    if (portNames.Contains(comPort.Name))
                     {
-                        if (ComPorts.TryRemove(comPort.Name, out var _))
-                        {
-                            removedPorts = true;
-                        }
+                        continue;
+                    }
+
+                    if (ComPorts.TryRemove(comPort.Name, out var _))
+                    {
+                        removedPorts = true;
                     }
                 }
             }
+
             if (newPorts)
             {
                 OnPortsAdded(addedPorts);
@@ -113,14 +113,16 @@ namespace ComPort.Scanner.Watchers
             }
         }
 
-        #region IDisposable Members
-
-        public void Dispose()
+        private void OnPortsAdded(List<ComPortModel> ports)
         {
-            watcher.Stop();
+            var handler = Added;
+            handler?.Invoke(this, new AddedEventArgs(ports));
         }
 
-        #endregion
-
+        private void OnPortsChanged()
+        {
+            var handler = Changed;
+            handler?.Invoke(this, new ChangedEventArgs(ComPorts.Values.ToList()));
+        }
     }
 }

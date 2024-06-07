@@ -362,7 +362,7 @@ MigrationBackup/
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
 
-# Not sure Which Tool generated this folder.
+# Jetbrains.
 .idea/
 
 # NService Bus
@@ -374,7 +374,6 @@ cdk-*-stack-outputs.json
 
 # AppSettings
 *.MSI.*
-*.DRIES-HP.*
 
 # Hang Fire DB
 *.db

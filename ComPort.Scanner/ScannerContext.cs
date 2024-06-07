@@ -1,112 +1,187 @@
 ﻿using System;
+using System.ComponentModel;
+using System.Diagnostics;
 using System.Drawing;
 using System.Text;
 using System.Windows.Forms;
 using ComPort.Scanner.Properties;
 using ComPort.Scanner.Watchers;
 using ComPort.Scanner.Watchers.EventArguments;
+using Microsoft.Win32;
 
 namespace ComPort.Scanner
 {
     public class ScannerContext : ApplicationContext
     {
-        private NotifyIcon trayIcon;
+#if DEBUG
+        private const string RegAppName = "ComPorts_Dev";
+#else
+        private const string RegAppName = "ComPorts";
+#endif
+        private const string SubKeyPath = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run";
+        private readonly MenuItem winStartMenu;
         private SerialPortWatcher serialPortWatcher;
-
+        private NotifyIcon trayIcon;
+        
         public ScannerContext()
         {
             // constructor is within the OnApplicationIdle method
             // due to UI thread handling and preventing duplicates when having events
-            Application.ApplicationExit += new EventHandler(OnExit);
-            Application.Idle += new EventHandler(OnIdle);
+            Application.ApplicationExit += OnExit;
+            Application.Idle += OnIdle;
+            winStartMenu = new MenuItem("Run on Windows Start", OnWinStartClick);
+            winStartMenu.Checked = true;
+
+            AddStartup(RegAppName, Application.ExecutablePath);
         }
 
-        private void OnExit(object sender, EventArgs e)
+        private static void AddStartup(string appName, string path)
         {
-            if (this.serialPortWatcher != null)
+            using (var key = Registry.CurrentUser.OpenSubKey(SubKeyPath, true))
             {
-                this.serialPortWatcher.Stop();
-                this.serialPortWatcher.Changed -= OnComPortsChanged;
-                this.serialPortWatcher.Added -= OnComPortsAdded;
+                key?.SetValue(appName, "\"" + path + "\"", RegistryValueKind.String);
             }
-
-            if (this.trayIcon != null)
-            {
-                this.trayIcon.Visible = false;
-                this.trayIcon.MouseClick -= OnTrayIconClick;
-                this.trayIcon.MouseDoubleClick -= OnTrayIconMouseDoubleClick;
-            }
-
-            Application.Exit();
         }
 
-        private void OnIdle(object sender, EventArgs e)
+        private static void RemoveStartup(string appName)
         {
-            if (serialPortWatcher == null)
+            using (var key = Registry.CurrentUser.OpenSubKey(SubKeyPath, true))
             {
-                this.serialPortWatcher = new SerialPortWatcher();
-                this.serialPortWatcher.Changed += OnComPortsChanged;
-                this.serialPortWatcher.Added += OnComPortsAdded;
-                this.serialPortWatcher.Start();
-
-                this.trayIcon = new NotifyIcon()
-                {
-                    Text = "Com Port Monitor",
-                    ContextMenu = new ContextMenu(
-                        new MenuItem[]
-                        {
-                            new MenuItem("Show", OnShowForm),
-                            new MenuItem("-"),
-                            new MenuItem("Exit", OnExit)
-                        }
-                    ),
-                    Icon = Icon.FromHandle(Resources.USB0.Handle),
-                    Visible = true,
-                };
-                this.trayIcon.MouseClick += OnTrayIconClick;
-                this.trayIcon.MouseDoubleClick += OnTrayIconMouseDoubleClick;
+                key?.DeleteValue(appName, false);
             }
         }
 
         private void OnComPortsAdded(object sender, AddedEventArgs e)
         {
-            if (e.Ports.Count > 0)
+            if (e.Ports.Count <= 0)
             {
-                var sb = new StringBuilder();
-                foreach (var item in e.Ports)
-                {
-                    sb.AppendLine(item.DeviceName);
-                }
-                this.trayIcon.BalloonTipIcon = ToolTipIcon.Info;
-                this.trayIcon.BalloonTipTitle = "Com Ports Added";
-                this.trayIcon.BalloonTipText = sb.ToString();
-                this.trayIcon.ShowBalloonTip(TimeSpan.FromSeconds(1).Milliseconds);
+                return;
             }
+
+            var sb = new StringBuilder();
+            foreach (var item in e.Ports)
+            {
+                sb.AppendLine(item.DeviceName);
+            }
+
+            trayIcon.BalloonTipIcon = ToolTipIcon.Info;
+            trayIcon.BalloonTipTitle = "Com Ports Added";
+            trayIcon.BalloonTipText = sb.ToString();
+            trayIcon.ShowBalloonTip(TimeSpan.FromSeconds(1).Milliseconds);
         }
 
-        private void OnComPortsChanged(object sender, ChangedEventArgs e)
+        private void OnDeviceManagerClick(object sender, EventArgs e)
         {
-            
+            var processStartInfo = new ProcessStartInfo
+            {
+                FileName = "mmc.exe",
+                Arguments = "devmgmt.msc"
+            };
+
+            var process = new Process
+            {
+                StartInfo = processStartInfo
+            };
+
+            process.Start();
         }
 
-        private void OnShowForm(object sender, EventArgs e)
+        private void OnExit(object sender, EventArgs e)
         {
-            var frm = new FormMain(this.serialPortWatcher.ComPorts.Values);
-            this.serialPortWatcher.Changed += frm.OnComPortsChanged;
+            if (serialPortWatcher != null)
+            {
+                serialPortWatcher.Stop();
+                serialPortWatcher.Added -= OnComPortsAdded;
+            }
+
+            if (trayIcon != null)
+            {
+                trayIcon.Visible = false;
+                trayIcon.MouseDoubleClick -= OnTrayIconMouseDoubleClick;
+            }
+#if DEBUG
+            RemoveStartup(RegAppName);
+#endif
+            Application.Exit();
+        }
+
+        private void OnIdle(object sender, EventArgs e)
+        {
+            if (serialPortWatcher != null)
+            {
+                return;
+            }
+
+            serialPortWatcher = new SerialPortWatcher();
+            serialPortWatcher.Added += OnComPortsAdded;
+            serialPortWatcher.Start();
+
+            trayIcon = new NotifyIcon
+            {
+                Text = "Com Port Monitor",
+                ContextMenu = new ContextMenu(
+                    new[]
+                    {
+                        new MenuItem("Show", OnShowFormClick),
+                        new MenuItem("-"),
+                        new MenuItem("Open Device Manager", OnDeviceManagerClick),
+                        new MenuItem("-"),
+                        winStartMenu,
+                        new MenuItem("About", OnAboutClick),
+                        new MenuItem("Exit", OnExit)
+                    }
+                ),
+                Icon = Icon.FromHandle(Resources.USB0.Handle),
+                Visible = true
+            };
+            trayIcon.MouseDoubleClick += OnTrayIconMouseDoubleClick;
+        }
+
+        private void OnAboutClick(object sender, EventArgs e)
+        {
+            var frm = new FormAbout();
+            frm.ShowDialog();
+        }
+
+        private void OnShowFormClick(object sender, EventArgs e)
+        {
+            var frm = new FormMain(serialPortWatcher.ComPorts.Values);
+            serialPortWatcher.Changed += frm.OnComPortsChanged;
+            frm.Closing += OnFormClosing;
             frm.Show();
         }
-
-        private void OnTrayIconClick(object sender, MouseEventArgs e)
+        
+        private void OnFormClosing(object sender, CancelEventArgs cancelEventArgs)
         {
-            if (e.Button == MouseButtons.Left)
+            if (!(sender is FormMain frm))
             {
-
+                return;
             }
+            serialPortWatcher.Changed -= frm.OnComPortsChanged;
         }
-
+        
         private void OnTrayIconMouseDoubleClick(object sender, MouseEventArgs e)
         {
-            OnShowForm(sender, e);
+            OnShowFormClick(sender, e);
+        }
+
+        private void OnWinStartClick(object sender, EventArgs e)
+        {
+            if (!(sender is MenuItem mnu))
+            {
+                return;
+            }
+
+            mnu.Checked = !mnu.Checked;
+
+            if (mnu.Checked)
+            {
+                AddStartup(RegAppName, Application.ExecutablePath);
+            }
+            else
+            {
+                RemoveStartup(RegAppName);
+            }
         }
     }
 }
