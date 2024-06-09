@@ -6,6 +6,11 @@ The application monitors for changes in plugged in devices and reports which COM
 
 [!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/Tsessebe)
 
+## Index
+
+1. [Interface](#intreface)
+2. [Installation](#installation)
+
 ## Interface
 
 ### Window
@@ -29,9 +34,10 @@ The application monitors for changes in plugged in devices and reports which COM
 
 ## Installation
 
-1. Download the zip-file from [releases](https://github.com/Tsessebe/ComPorts/releases).
-2. Unzip to a location on your pc/ laptop hard drive.
-3. Run the exe.
+1. Download the latest release from [releases](https://github.com/Tsessebe/ComPorts/releases).
+2. Run the installer exe.
+3. The Installer is not signed so windows might ask if you want to run the Installer. Select Yes.
+4. Follow the prompts.
 
 The app will also start up when windows starts. 
 This can be disabled by right-click on the tray icon and deselect "Run on Windows Start" menu.
