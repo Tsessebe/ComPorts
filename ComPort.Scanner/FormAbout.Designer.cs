@@ -94,10 +94,11 @@ namespace ComPort.Scanner
             this.MinimizeBox = false;
             this.Name = "FormAbout";
             this.ShowInTaskbar = false;
-            this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
+            this.StartPosition = System.Windows.Forms.FormStartPosition.Manual;
             this.Text = "About Com Ports";
             this.Load += new System.EventHandler(this.OnFormLoad);
             this.ResumeLayout(false);
+
         }
 
         private System.Windows.Forms.Label lblVersion;

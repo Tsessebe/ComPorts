@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Drawing;
 using System.Windows.Forms;
 
 namespace ComPort.Scanner
@@ -36,6 +37,12 @@ namespace ComPort.Scanner
         private void OnFormLoad(object sender, EventArgs e)
         {
             lblVersion.Text = $"Version: {Application.ProductVersion}";
+
+            var screen = Screen.PrimaryScreen;
+
+            var x = screen.WorkingArea.Width - Width;
+            var y = screen.WorkingArea.Height - Height;
+            Location = new Point(x, y);
         }
     }
 }
