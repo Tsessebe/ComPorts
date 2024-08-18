@@ -246,7 +246,7 @@ namespace ComPort.Scanner
                             continue;
                         }
                         
-                        var text = item.DeviceName;
+                        var text = item.Caption;
                         textSize = g.MeasureString(text, Font, -1, StringFormat.GenericTypographic);
                         if (textSize.Width > colWidth)
                         {

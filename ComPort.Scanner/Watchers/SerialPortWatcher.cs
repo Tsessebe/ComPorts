@@ -36,7 +36,7 @@ namespace ComPort.Scanner.Watchers
 
         public void Start()
         {
-            taskScheduler = TaskScheduler.FromCurrentSynchronizationContext();
+            taskScheduler = TaskScheduler.FromCurrentSynchronizationContext();            
 
             var query = new WqlEventQuery(@"SELECT * FROM Win32_DeviceChangeEvent");
             watcher = new ManagementEventWatcher(query);
@@ -56,8 +56,7 @@ namespace ComPort.Scanner.Watchers
         private void CheckForNewPorts(EventArrivedEventArgs args)
         {
             // do it async, so it is performed in the UI thread if this class has been created in the UI thread
-            Task.Factory.StartNew(CheckForNewPortsAsync, CancellationToken.None, TaskCreationOptions.None,
-                taskScheduler);
+            Task.Factory.StartNew(CheckForNewPortsAsync, CancellationToken.None, TaskCreationOptions.None, taskScheduler);
         }
 
         private void CheckForNewPortsAsync()
@@ -70,16 +69,21 @@ namespace ComPort.Scanner.Watchers
                    new ManagementObjectSearcher(@"SELECT * FROM Win32_PnPEntity WHERE Caption like '%(COM%'"))
             {
                 var portNames = SerialPort.GetPortNames().OrderBy(p => p).ToList();
-                var ports = searcher.Get().Cast<ManagementBaseObject>().ToList().Select(p => p["Caption"].ToString());
+                
+                var portObjects = searcher.Get().Cast<ManagementBaseObject>()
+                    .Select(p => ComPortModel.Create(name:p["Name"].ToString(),
+                        caption:p["Caption"].ToString(),
+                        deviceId:p["DeviceId"].ToString(),
+                        pnPDeviceId:p["PNPDeviceID"].ToString(),
+                        description:p["Description"].ToString()
+                    ))
+                    .Where(o => !o.Name.Contains("Bluetooth link"))
+                    .ToList();
 
-                var portList = portNames
-                    .Select(n => new ComPortModel(n, ports.FirstOrDefault(s => s.Contains(n))))
-                    .Where(p => !p.DeviceName.StartsWith("Standard Serial"))
-                    .OrderBy(p => p.Name).ToList();
 
-                foreach (var port in portList)
+                foreach (var port in portObjects)
                 {
-                    if (!ComPorts.TryAdd(port.Name, port))
+                    if (!ComPorts.TryAdd(port.PortName, port))
                     {
                         continue;
                     }
@@ -90,12 +94,12 @@ namespace ComPort.Scanner.Watchers
 
                 foreach (var comPort in ComPorts.Values)
                 {
-                    if (portNames.Contains(comPort.Name))
+                    if (portNames.Contains(comPort.PortName))
                     {
                         continue;
                     }
 
-                    if (ComPorts.TryRemove(comPort.Name, out var _))
+                    if (ComPorts.TryRemove(comPort.PortName, out var _))
                     {
                         removedPorts = true;
                     }

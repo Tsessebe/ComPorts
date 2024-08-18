@@ -5,16 +5,27 @@ VisualStudioVersion = 17.7.34009.444
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ComPort.Scanner", "ComPort.Scanner\ComPort.Scanner.csproj", "{A0EAA83C-B0EF-44E6-B7AF-29B9AC9EB699}"
 EndProject
+Project("{840C416C-B8F3-42BC-B0DD-F6BB14C9F8CB}") = "ComPortsSetup", "ComPortsSetup\ComPortsSetup.aiproj", "{2FDC815D-F5FB-4A9D-BD26-1CD1E1A317A4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		All|Any CPU = All|Any CPU
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{A0EAA83C-B0EF-44E6-B7AF-29B9AC9EB699}.All|Any CPU.ActiveCfg = Release|Any CPU
+		{A0EAA83C-B0EF-44E6-B7AF-29B9AC9EB699}.All|Any CPU.Build.0 = Release|Any CPU
 		{A0EAA83C-B0EF-44E6-B7AF-29B9AC9EB699}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{A0EAA83C-B0EF-44E6-B7AF-29B9AC9EB699}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A0EAA83C-B0EF-44E6-B7AF-29B9AC9EB699}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A0EAA83C-B0EF-44E6-B7AF-29B9AC9EB699}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2FDC815D-F5FB-4A9D-BD26-1CD1E1A317A4}.All|Any CPU.ActiveCfg = DefaultBuild
+		{2FDC815D-F5FB-4A9D-BD26-1CD1E1A317A4}.All|Any CPU.Build.0 = DefaultBuild
+		{2FDC815D-F5FB-4A9D-BD26-1CD1E1A317A4}.Debug|Any CPU.ActiveCfg = DefaultBuild
+		{2FDC815D-F5FB-4A9D-BD26-1CD1E1A317A4}.Debug|Any CPU.Build.0 = DefaultBuild
+		{2FDC815D-F5FB-4A9D-BD26-1CD1E1A317A4}.Release|Any CPU.ActiveCfg = DefaultBuild
+		{2FDC815D-F5FB-4A9D-BD26-1CD1E1A317A4}.Release|Any CPU.Build.0 = DefaultBuild
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

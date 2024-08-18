@@ -4,7 +4,10 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Text;
 using System.Windows.Forms;
+using ComPort.Scanner.Extensions;
 using ComPort.Scanner.Properties;
+using ComPort.Scanner.Services;
+using ComPort.Scanner.Services.EventArguments;
 using ComPort.Scanner.Watchers;
 using ComPort.Scanner.Watchers.EventArguments;
 using Microsoft.Win32;
@@ -21,8 +24,11 @@ namespace ComPort.Scanner
         private const string SubKeyPath = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run";
         private readonly MenuItem winStartMenu;
         private SerialPortWatcher serialPortWatcher;
+        private VersionService versionService;
         private NotifyIcon trayIcon;
-        
+
+        private FormMain mainForm = null;
+
         public ScannerContext()
         {
             // constructor is within the OnApplicationIdle method
@@ -33,7 +39,14 @@ namespace ComPort.Scanner
             winStartMenu.Checked = true;
 
             AddStartup(RegAppName, Application.ExecutablePath);
+            versionService = new VersionService(Application.ProductVersion);
+            versionService.NewVersionAvailible += OnVersionServiceNewVersionAvailible;
+            versionService.NoUpdate += OnVersionServiceNoUpdate;
+            versionService.CheckGitHubVersion();
+
         }
+
+        
 
         private static void AddStartup(string appName, string path)
         {
@@ -61,7 +74,7 @@ namespace ComPort.Scanner
             var sb = new StringBuilder();
             foreach (var item in e.Ports)
             {
-                sb.AppendLine(item.DeviceName);
+                sb.AppendLine(item.Caption);
             }
 
             trayIcon.BalloonTipIcon = ToolTipIcon.Info;
@@ -118,7 +131,11 @@ namespace ComPort.Scanner
 
             trayIcon = new NotifyIcon
             {
+#if DEBUG
+                Text = "Com Port Monitor - DEV",
+#else
                 Text = "Com Port Monitor",
+#endif
                 ContextMenu = new ContextMenu(
                     new[]
                     {
@@ -128,6 +145,7 @@ namespace ComPort.Scanner
                         new MenuItem("-"),
                         winStartMenu,
                         new MenuItem("About", OnAboutClick),
+                        new MenuItem("Check for Update", OnCheckUpdateClick),
                         new MenuItem("Exit", OnExit)
                     }
                 ),
@@ -135,6 +153,8 @@ namespace ComPort.Scanner
                 Visible = true
             };
             trayIcon.MouseDoubleClick += OnTrayIconMouseDoubleClick;
+
+
         }
 
         private void OnAboutClick(object sender, EventArgs e)
@@ -143,23 +163,34 @@ namespace ComPort.Scanner
             frm.ShowDialog();
         }
 
+        private void OnCheckUpdateClick(object sender, EventArgs e)
+        {
+            versionService.CheckGitHubVersion(true);
+        }
+
         private void OnShowFormClick(object sender, EventArgs e)
         {
-            var frm = new FormMain(serialPortWatcher.ComPorts.Values);
-            serialPortWatcher.Changed += frm.OnComPortsChanged;
-            frm.Closing += OnFormClosing;
-            frm.Show();
+            if (mainForm == null)
+            {
+                mainForm = new FormMain(serialPortWatcher.ComPorts.Values);
+                serialPortWatcher.Changed += mainForm.OnComPortsChanged;
+                mainForm.Closing += OnFormClosing;
+            }
+            mainForm.Show();
+            mainForm.Activate();
         }
-        
+
         private void OnFormClosing(object sender, CancelEventArgs cancelEventArgs)
         {
             if (!(sender is FormMain frm))
             {
                 return;
             }
-            serialPortWatcher.Changed -= frm.OnComPortsChanged;
+            serialPortWatcher.Changed -= mainForm.OnComPortsChanged;
+            mainForm.Dispose();
+            mainForm = null;
         }
-        
+
         private void OnTrayIconMouseDoubleClick(object sender, MouseEventArgs e)
         {
             OnShowFormClick(sender, e);
@@ -182,6 +213,19 @@ namespace ComPort.Scanner
             {
                 RemoveStartup(RegAppName);
             }
+        }
+
+        private void OnVersionServiceNewVersionAvailible(object sender, NewVersionEventArgs e)
+        {
+            trayIcon.BalloonTipIcon = ToolTipIcon.Info;
+            trayIcon.BalloonTipTitle = "Com Ports - New Verion";
+            trayIcon.BalloonTipText = $"Version: {e.GitVersion} is availible.";
+            trayIcon.ShowBalloonTip(TimeSpan.FromSeconds(1).Milliseconds);
+        }
+
+        private void OnVersionServiceNoUpdate(object sender, VersionEventArgs e)
+        {
+            MessageBox.Show("No New Version availible", "Com Ports Version", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
     }
 }
