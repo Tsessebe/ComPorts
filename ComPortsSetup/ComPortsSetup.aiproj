@@ -27,7 +27,7 @@
       <Name>ComPort.Scanner</Name>
       <Project>{a0eaa83c-b0ef-44e6-b7af-29b9ac9eb699}</Project>
       <Private>True</Private>
-      <OutputsToImport>PrimaryOutput</OutputsToImport>
+      <OutputsToImport>PrimaryOutput;References</OutputsToImport>
     </ProjectReference>
   </ItemGroup>
   <Target Name="Build">
